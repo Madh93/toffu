@@ -172,7 +172,27 @@ func (t *Toffu) GetStatus() (err error) {
 		totalDuration += delta
 	}
 
-	fmt.Printf("Total hours worked today: %s\n", secondsToHumanReadable(totalDuration))
+	// Remaining hours
+	userId, err := getUserId()
+	if err != nil {
+		return
+	}
+
+	workday, err := t.api.GetUserWorkDay(userId)
+	if err != nil {
+		return err
+	}
+
+	remainingDuration := time.Duration(workday.ScheduleHours*float64(time.Hour)) - totalDuration
+
+	// Show hours worked and remaining hours
+	fmt.Printf("Total hours worked today: %s", secondsToHumanReadable(totalDuration))
+
+	if remainingDuration > 0 {
+		fmt.Printf(" (%s remaining)\n", secondsToHumanReadable(remainingDuration))
+	} else {
+		fmt.Println("")
+	}
 
 	return
 }
