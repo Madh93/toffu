@@ -48,7 +48,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Config name
-		viper.SetConfigName("toffu")
+		viper.SetConfigName("toffu.json")
 		viper.SetConfigType("json")
 
 		// Default config file
