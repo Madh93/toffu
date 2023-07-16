@@ -85,6 +85,15 @@ func (t *Toffu) ClockIn() (err error) {
 		return errors.New("error clocking in, you have already clocked in")
 	}
 
+	workday, err := t.api.GetUserWorkDay(userId)
+	if err != nil {
+		return err
+	}
+
+	if workday.ScheduleHours <= 0.0 {
+		return errors.New("error clocking in, no scheduled working hours today")
+	}
+
 	err = t.api.Sign(userId)
 	if err != nil {
 		return fmt.Errorf("error clocking in: %v", err)
