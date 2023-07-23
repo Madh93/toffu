@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/viper"
@@ -121,4 +122,33 @@ func secondsToHumanReadable(duration time.Duration) string {
 	seconds := duration / time.Second
 
 	return fmt.Sprintf("%dh %dm %ds", hours, minutes, seconds)
+}
+
+func runConcurrently(funcs ...func() error) (err error) {
+	var wg sync.WaitGroup
+	wg.Add(len(funcs))
+	errChan := make(chan error, len(funcs))
+
+	// Run goroutines
+	for _, f := range funcs {
+		go func(fn func() error) {
+			defer wg.Done()
+			if err := fn(); err != nil {
+				errChan <- err
+			}
+		}(f)
+	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(errChan)
+
+	// Collect any errors
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

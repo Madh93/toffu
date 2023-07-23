@@ -14,6 +14,13 @@ type Signs []struct {
 	TrueDate string `json:"TrueDate"` // Local Time
 }
 
+func (s Signs) HasAlreadyClockedIn() bool {
+	if len(s) > 0 {
+		return s[len(s)-1].SignIn
+	}
+	return false
+}
+
 func (w WoffuAPI) GetSigns() (Signs, error) {
 	if w.auth.Type() != "TokenAuth" {
 		return nil, errors.New("token authentication is required")

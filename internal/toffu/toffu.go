@@ -10,8 +10,11 @@ import (
 )
 
 type Toffu struct {
-	api   *woffuapi.WoffuAPI
-	signs *Signs
+	api       *woffuapi.WoffuAPI
+	signs     woffuapi.Signs
+	signSlots woffuapi.SignSlots
+	workday   *woffuapi.WorkDay
+	userId    int
 }
 
 func New() *Toffu {
@@ -26,8 +29,29 @@ func (t *Toffu) SetAPI(api *woffuapi.WoffuAPI) {
 	t.api = api
 }
 
-func (t *Toffu) SetSigns(signs woffuapi.Signs) {
-	t.signs = &Signs{signs: signs}
+func (t *Toffu) setSigns() (err error) {
+	t.signs, err = t.api.GetSigns()
+	return
+}
+
+func (t *Toffu) setSignSlots() (err error) {
+	t.signSlots, err = t.api.GetSignSlots()
+	return
+}
+
+func (t *Toffu) setWorkday() (err error) {
+	err = t.setUserId()
+	if err != nil {
+		return
+	}
+
+	t.workday, err = t.api.GetUserWorkDay(t.userId)
+	return
+}
+
+func (t *Toffu) setUserId() (err error) {
+	t.userId, err = getUserId()
+	return
 }
 
 func (t *Toffu) GenerateToken() (err error) {
@@ -70,31 +94,20 @@ func (t *Toffu) ClockIn() (err error) {
 		return err
 	}
 
-	userId, err := getUserId()
-	if err != nil {
-		return
-	}
-
-	signs, err := t.api.GetSigns()
+	err = runConcurrently(t.setSigns, t.setWorkday)
 	if err != nil {
 		return err
 	}
-	t.SetSigns(signs)
 
-	if t.signs.hasAlreadyClockedIn() {
+	if t.signs.HasAlreadyClockedIn() {
 		return errors.New("error clocking in, you have already clocked in")
 	}
 
-	workday, err := t.api.GetUserWorkDay(userId)
-	if err != nil {
-		return err
-	}
-
-	if workday.ScheduleHours <= 0.0 {
+	if t.workday.ScheduleHours <= 0.0 {
 		return errors.New("error clocking in, no scheduled working hours today")
 	}
 
-	err = t.api.Sign(userId)
+	err = t.api.Sign(t.userId)
 	if err != nil {
 		return fmt.Errorf("error clocking in: %v", err)
 	}
@@ -112,22 +125,16 @@ func (t *Toffu) ClockOut() (err error) {
 		return err
 	}
 
-	userId, err := getUserId()
-	if err != nil {
-		return
-	}
-
-	signs, err := t.api.GetSigns()
+	err = runConcurrently(t.setSigns, t.setUserId)
 	if err != nil {
 		return err
 	}
-	t.SetSigns(signs)
 
-	if !t.signs.hasAlreadyClockedIn() {
+	if !t.signs.HasAlreadyClockedIn() {
 		return errors.New("error clocking out, you have not clocked in or you have already clocked out")
 	}
 
-	err = t.api.Sign(userId)
+	err = t.api.Sign(t.userId)
 	if err != nil {
 		return fmt.Errorf("error clocking out: %v", err)
 	}
@@ -143,7 +150,7 @@ func (t *Toffu) GetStatus() (err error) {
 		return err
 	}
 
-	slots, err := t.api.GetSignSlots()
+	err = runConcurrently(t.setSignSlots, t.setWorkday)
 	if err != nil {
 		return err
 	}
@@ -151,7 +158,7 @@ func (t *Toffu) GetStatus() (err error) {
 	// Current status
 	status := ""
 
-	if len(slots) > 0 && (woffuapi.SignSlotEvent{}) == slots[len(slots)-1].Out {
+	if len(t.signSlots) > 0 && (woffuapi.SignSlotEvent{}) == t.signSlots[len(t.signSlots)-1].Out {
 		status = "In Office"
 	} else {
 		status = "Out of Office"
@@ -166,7 +173,7 @@ func (t *Toffu) GetStatus() (err error) {
 		return err
 	}
 
-	for _, slot := range slots {
+	for _, slot := range t.signSlots {
 		inTime, _ := time.Parse("15:04:05", slot.In.ShortTrueTime)
 		outTime, _ := time.Parse("15:04:05", time.Now().In(location).Format("15:04:05"))
 		// In Office
@@ -182,17 +189,7 @@ func (t *Toffu) GetStatus() (err error) {
 	}
 
 	// Remaining hours
-	userId, err := getUserId()
-	if err != nil {
-		return
-	}
-
-	workday, err := t.api.GetUserWorkDay(userId)
-	if err != nil {
-		return err
-	}
-
-	remainingDuration := time.Duration(workday.ScheduleHours*float64(time.Hour)) - totalDuration
+	remainingDuration := time.Duration(t.workday.ScheduleHours*float64(time.Hour)) - totalDuration
 
 	// Show hours worked and remaining hours
 	fmt.Printf("Total hours worked today: %s", secondsToHumanReadable(totalDuration))
