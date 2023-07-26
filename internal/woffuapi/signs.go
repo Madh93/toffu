@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type Signs []struct {
@@ -67,6 +68,28 @@ type SignSlotEvent struct {
 	ShortTrueTime string `json:"ShortTrueTime"`
 	SignType      int    `json:"SignType"`
 	SignEventId   string `json:"SignEventId"`
+}
+
+func (s SignSlots) TimeWorked() time.Duration {
+	totalDuration := 0 * time.Second
+	location, _ := time.LoadLocation("Europe/Madrid") // TODO: Woffu TZ or Office TZ?
+
+	for _, slot := range s {
+		inTime, _ := time.Parse("15:04:05", slot.In.ShortTrueTime)
+		outTime, _ := time.Parse("15:04:05", time.Now().In(location).Format("15:04:05"))
+		// In Office
+		if slot.Out.ShortTrueTime != "" {
+			outTime, _ = time.Parse("15:04:05", slot.Out.ShortTrueTime)
+		}
+		// Day/Night shift transition
+		if inTime.After(outTime) {
+			outTime = outTime.Add(24 * time.Hour)
+		}
+		delta := outTime.Sub(inTime)
+		totalDuration += delta
+	}
+
+	return totalDuration
 }
 
 func (w WoffuAPI) GetSignSlots() (SignSlots, error) {

@@ -107,6 +107,10 @@ func (t *Toffu) ClockIn() (err error) {
 		return errors.New("error clocking in, no scheduled working hours today")
 	}
 
+	if t.signSlots.TimeWorked() >= time.Duration(t.workday.ScheduleHours*float64(time.Hour)) {
+		return errors.New("error clocking in, you have worked too much today")
+	}
+
 	err = t.api.Sign(t.userId)
 	if err != nil {
 		return fmt.Errorf("error clocking in: %v", err)
@@ -167,26 +171,7 @@ func (t *Toffu) GetStatus() (err error) {
 	fmt.Printf("Status: %s\n", status)
 
 	// Hours worked
-	totalDuration := 0 * time.Second
-	location, err := time.LoadLocation("Europe/Madrid") // TODO: Woffu TZ or Office TZ?
-	if err != nil {
-		return err
-	}
-
-	for _, slot := range t.signSlots {
-		inTime, _ := time.Parse("15:04:05", slot.In.ShortTrueTime)
-		outTime, _ := time.Parse("15:04:05", time.Now().In(location).Format("15:04:05"))
-		// In Office
-		if slot.Out.ShortTrueTime != "" {
-			outTime, _ = time.Parse("15:04:05", slot.Out.ShortTrueTime)
-		}
-		// Day/Night shift transition
-		if inTime.After(outTime) {
-			outTime = outTime.Add(24 * time.Hour)
-		}
-		delta := outTime.Sub(inTime)
-		totalDuration += delta
-	}
+	totalDuration := t.signSlots.TimeWorked()
 
 	// Remaining hours
 	remainingDuration := time.Duration(t.workday.ScheduleHours*float64(time.Hour)) - totalDuration
