@@ -18,7 +18,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:     "toffu",
-	Version: "0.1.0",
+	Version: "0.2.0",
 	Short:   "Toffu - Woffu presence from your terminal",
 	Long:    "Toffu is a simple CLI to manage presence in Woffu from your terminal",
 	Run: func(cmd *cobra.Command, args []string) {
