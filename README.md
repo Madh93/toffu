@@ -9,6 +9,7 @@ Toffu is a command-line interface (CLI) tool that enables users to manage their 
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#usage">Usage</a> •
+  <a href="#examples">Examples</a> •
   <a href="#useful-links">Useful Links</a> •
   <a href="#license">License</a>
 </p>
@@ -108,6 +109,11 @@ Check out or take a pause:
 Display the current work schedule status:
 
 <img alt="Get status" src="docs/gif/status.gif"/>
+
+## Examples
+
+- [Automatic breaks or pauses](examples/auto-breaks/README.md)
+- [Clock In On Startup](examples/clock-in-on-startup/README.md)
 
 ## Useful Links
 

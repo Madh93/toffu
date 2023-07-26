@@ -1,0 +1,10 @@
+[Unit]
+Description=Toffu in on startup
+After=dbus.service network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/toffu in
+
+[Install]
+WantedBy=default.target
