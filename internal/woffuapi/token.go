@@ -22,15 +22,16 @@ func (w WoffuAPI) CreateToken() (*TokenResponse, error) {
 	credentials := strings.Split(w.auth.Credentials(), ":")
 
 	// Build API Request
+	body := fmt.Sprintf("grant_type=password&username=%s&password=%s", credentials[0], credentials[1])
 	apiRequest := APIRequest{
 		method:   "POST",
 		endpoint: "/token",
 		headers: map[string]string{
 			"Accept":       "application/json",
-			"Content-Type": "application/json",
+			"Content-Type": "application/x-www-form-urlencoded",
 		},
 		// Credentials need to be passed in the body :S
-		body: []byte(fmt.Sprintf("grant_type=password&username=%s&password=%s", credentials[0], credentials[1])),
+		body: []byte(body),
 	}
 
 	// Get Token
